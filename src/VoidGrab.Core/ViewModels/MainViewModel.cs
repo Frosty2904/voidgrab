@@ -1,8 +1,8 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using System.Windows.Input;
 using VoidGrab.Models;
+using VoidGrab.Platform;
 using VoidGrab.Services;
 
 namespace VoidGrab.ViewModels;
@@ -13,6 +13,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly SpotifyResolver _spotify = new();
     private readonly YtDlpRunner _runner;
     private readonly AppSettings _settings;
+    private readonly IPlatformServices _platform;
 
     private CancellationTokenSource? _cancellation;
     private Task _pump = Task.CompletedTask;
@@ -24,8 +25,9 @@ public sealed class MainViewModel : ObservableObject
     private MediaFormat _format;
     private QualityOption _quality;
 
-    public MainViewModel()
+    public MainViewModel(IPlatformServices platform)
     {
+        _platform = platform;
         _runner = new YtDlpRunner(_tools);
         _settings = SettingsStore.Load();
 
@@ -38,8 +40,19 @@ public sealed class MainViewModel : ObservableObject
         CancelCommand = new RelayCommand(Cancel, () => IsBusy);
         ClearFinishedCommand = new RelayCommand(ClearFinished, () => Jobs.Any(j => j.IsFinished));
         OpenFolderCommand = new RelayCommand(OpenFolder);
-        BrowseCommand = new RelayCommand(Browse);
+        BrowseCommand = new RelayCommand(async () => await BrowseAsync());
         UpdateToolCommand = new RelayCommand(async () => await UpdateToolAsync(), () => !IsBusy);
+
+        // Without WPF's ambient requery, the queue has to say when it changed.
+        Jobs.CollectionChanged += (_, _) => RefreshCommands();
+    }
+
+    private void RefreshCommands()
+    {
+        AddCommand.RaiseCanExecuteChanged();
+        CancelCommand.RaiseCanExecuteChanged();
+        ClearFinishedCommand.RaiseCanExecuteChanged();
+        UpdateToolCommand.RaiseCanExecuteChanged();
     }
 
     // ---- collections -----------------------------------------------------
@@ -55,7 +68,10 @@ public sealed class MainViewModel : ObservableObject
     public string UrlInput
     {
         get => _urlInput;
-        set => Set(ref _urlInput, value);
+        set
+        {
+            if (Set(ref _urlInput, value)) AddCommand.RaiseCanExecuteChanged();
+        }
     }
 
     public MediaFormat SelectedFormat
@@ -135,17 +151,17 @@ public sealed class MainViewModel : ObservableObject
         get => _isBusy;
         private set
         {
-            if (Set(ref _isBusy, value)) CommandManager.InvalidateRequerySuggested();
+            if (Set(ref _isBusy, value)) RefreshCommands();
         }
     }
 
     // ---- commands --------------------------------------------------------
-    public ICommand AddCommand { get; }
-    public ICommand CancelCommand { get; }
-    public ICommand ClearFinishedCommand { get; }
-    public ICommand OpenFolderCommand { get; }
-    public ICommand BrowseCommand { get; }
-    public ICommand UpdateToolCommand { get; }
+    public RelayCommand AddCommand { get; }
+    public RelayCommand CancelCommand { get; }
+    public RelayCommand ClearFinishedCommand { get; }
+    public RelayCommand OpenFolderCommand { get; }
+    public RelayCommand BrowseCommand { get; }
+    public RelayCommand UpdateToolCommand { get; }
 
     // ---- lifecycle -------------------------------------------------------
     public async Task InitialiseAsync()
@@ -419,7 +435,7 @@ public sealed class MainViewModel : ObservableObject
     private void ClearFinished()
     {
         foreach (var finished in Jobs.Where(j => j.IsFinished).ToList()) Jobs.Remove(finished);
-        CommandManager.InvalidateRequerySuggested();
+        RefreshCommands();
     }
 
     private async Task UpdateToolAsync()
@@ -447,7 +463,7 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             Directory.CreateDirectory(OutputDirectory);
-            Process.Start(new ProcessStartInfo(OutputDirectory) { UseShellExecute = true });
+            _platform.OpenFolder(OutputDirectory);
         }
         catch (Exception ex)
         {
@@ -455,15 +471,19 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    private void Browse()
+    private async Task BrowseAsync()
     {
-        var dialog = new Microsoft.Win32.OpenFolderDialog
+        try
         {
-            Title = "Where should downloads go?",
-            InitialDirectory = Directory.Exists(OutputDirectory) ? OutputDirectory : "",
-        };
+            var chosen = await _platform.PickFolderAsync(
+                Directory.Exists(OutputDirectory) ? OutputDirectory : null);
 
-        if (dialog.ShowDialog() == true) OutputDirectory = dialog.FolderName;
+            if (!string.IsNullOrWhiteSpace(chosen)) OutputDirectory = chosen;
+        }
+        catch (Exception ex)
+        {
+            Write($"Could not open the folder picker: {ex.Message}");
+        }
     }
 
     // ---- helpers ---------------------------------------------------------

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Everything here is platform-neutral on purpose: models, the yt-dlp process
+    wrapper, Spotify metadata, tool provisioning and all queue state. It targets
+    plain net10.0 rather than net10.0-windows so the same assembly backs both the
+    WPF head on Windows and the Avalonia head on macOS and Linux.
+
+    The rule for this project: no reference to a UI toolkit, and no assumption
+    about which OS it is running on beyond what OperatingSystem.IsX() answers.
+    Anything that genuinely needs a window or a shell goes behind an interface in
+    Platform/ and is supplied by whichever head is hosting it.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>VoidGrab</RootNamespace>
+    <AssemblyName>VoidGrab.Core</AssemblyName>
+  </PropertyGroup>
+
+</Project>

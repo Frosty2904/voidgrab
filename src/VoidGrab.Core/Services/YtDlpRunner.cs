@@ -208,11 +208,18 @@ public sealed class YtDlpRunner(ToolProvisioner tools)
         yield return job.OutputDirectory;
         yield return "--output";
         yield return "%(title)s.%(ext)s";
-        yield return "--windows-filenames";
         yield return "--no-overwrites";
 
+        // Only on Windows. This strips characters that NTFS rejects — colons,
+        // question marks, quotes — which macOS and Linux accept perfectly well,
+        // so applying it everywhere would needlessly mangle titles.
+        if (OperatingSystem.IsWindows()) yield return "--windows-filenames";
+
         yield return "--ffmpeg-location";
-        yield return tools.ToolsDirectory;
+        // Not ToolsDirectory: off Windows this may be a system ffmpeg found on
+        // PATH or under a Homebrew prefix, which is likely to be the correct
+        // architecture where a downloaded x86_64 build would need Rosetta.
+        yield return tools.FfmpegDirectory;
 
         yield return "--retries";
         yield return "5";

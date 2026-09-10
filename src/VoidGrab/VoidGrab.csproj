@@ -27,4 +27,8 @@
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\VoidGrab.Core\VoidGrab.Core.csproj" />
+  </ItemGroup>
+
 </Project>

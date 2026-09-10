@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The cross-platform head: macOS, Linux, and Windows if you want it.
+
+    WPF has no implementation outside Windows, so a Mac build could never be a
+    matter of retargeting the existing project — the UI has to be rebuilt on a
+    toolkit that runs there. Avalonia is the closest thing to WPF that does, and
+    everything below the UI is shared verbatim through VoidGrab.Core.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+
+    <AssemblyName>VoidGrab</AssemblyName>
+    <RootNamespace>VoidGrab.Desktop</RootNamespace>
+    <Product>VoidGrab</Product>
+    <Version>1.0.0</Version>
+
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!--
+      Trimming is off deliberately. Avalonia resolves a good deal by reflection,
+      and a trimmed build that silently loses a control template is far worse
+      than a larger download — especially one I cannot test on a Mac.
+    -->
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
+    <!--
+      Inter is embedded rather than assumed. Segoe UI does not exist on macOS,
+      so without a bundled face the app would fall back to the system default
+      and look meaningfully different from the Windows build.
+    -->
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\VoidGrab.Core\VoidGrab.Core.csproj" />
+  </ItemGroup>
+
+</Project>

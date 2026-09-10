@@ -1,5 +1,7 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/VoidGrab.Core/VoidGrab.Core.csproj" />
+    <Project Path="src/VoidGrab.Desktop/VoidGrab.Desktop.csproj" />
     <Project Path="src/VoidGrab/VoidGrab.csproj" />
   </Folder>
 </Solution>

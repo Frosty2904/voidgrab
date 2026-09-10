@@ -1,0 +1,223 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="VoidGrab.Desktop.MainWindow"
+        Title="VoidGrab"
+        Width="1020" Height="820"
+        MinWidth="880" MinHeight="620"
+        Background="{DynamicResource Canvas}"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <!-- One queue row: title, source and format chips, progress, detail. -->
+        <DataTemplate x:Key="JobRow">
+            <Border Classes="inset" Padding="14,11" Margin="0,0,0,8">
+                <Grid RowDefinitions="Auto,Auto,Auto">
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0"
+                                   Classes="strong"
+                                   Text="{Binding Title}"
+                                   FontSize="13.5"
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center" />
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0" Spacing="6">
+                            <Border Classes="chip">
+                                <TextBlock Classes="readout" Text="{Binding SourceLabel}" />
+                            </Border>
+                            <Border Classes="chip">
+                                <TextBlock Classes="readout" Text="{Binding FormatLabel}" />
+                            </Border>
+                            <TextBlock Classes="readout"
+                                       Text="{Binding StateLabel}"
+                                       Foreground="{Binding State, Converter={StaticResource StateBrush}}"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
+
+                    <ProgressBar Grid.Row="1"
+                                 Margin="0,10,0,0"
+                                 Minimum="0" Maximum="1"
+                                 Value="{Binding Progress}"
+                                 IsIndeterminate="{Binding IsIndeterminate}" />
+
+                    <TextBlock Grid.Row="2"
+                               Classes="readout"
+                               Margin="0,7,0,0"
+                               Text="{Binding Detail}"
+                               TextTrimming="CharacterEllipsis" />
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid Margin="24,20,24,18" RowDefinitions="Auto,Auto,*,Auto,Auto">
+
+        <!-- ==================================================== Header === -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,18">
+            <Border Grid.Column="0"
+                    Width="14" Height="14"
+                    CornerRadius="2"
+                    Background="{DynamicResource NeonFill}"
+                    VerticalAlignment="Center"
+                    Margin="0,0,12,0"
+                    RenderTransform="rotate(45deg)" />
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock Classes="title" Text="VoidGrab" />
+                <TextBlock Classes="readout"
+                           Text="YouTube  ·  TikTok  ·  Spotify-matched audio"
+                           Margin="0,2,0,0" />
+            </StackPanel>
+
+            <Button Grid.Column="2"
+                    Classes="ghost"
+                    Content="Update yt-dlp"
+                    Command="{Binding UpdateToolCommand}"
+                    VerticalAlignment="Center" />
+        </Grid>
+
+        <!-- ==================================================== Controls = -->
+        <Border Grid.Row="1" Classes="panel" Padding="18" Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock Classes="label" Text="LINK" />
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBox Grid.Column="0"
+                             Name="LinkBox"
+                             Text="{Binding UrlInput}"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             MinHeight="42" MaxHeight="96"
+                             PlaceholderText="Paste a YouTube, TikTok or Spotify link"
+                             KeyDown="OnLinkKeyDown" />
+
+                    <Button Grid.Column="1"
+                            Classes="accent"
+                            Content="Add to queue"
+                            Command="{Binding AddCommand}"
+                            Margin="10,0,0,0"
+                            VerticalAlignment="Stretch" />
+                </Grid>
+                <TextBlock Classes="readout"
+                           Margin="0,7,0,0"
+                           TextWrapping="Wrap"
+                           Text="One per line for several at once. Playlists and albums expand into individual items." />
+
+                <!-- Format and quality -->
+                <Grid ColumnDefinitions="*,16,200" Margin="0,16,0,0">
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Classes="label" Text="FORMAT" />
+                        <ComboBox HorizontalAlignment="Stretch"
+                                  ItemsSource="{Binding Formats}"
+                                  SelectedItem="{Binding SelectedFormat}" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Classes="label" Text="QUALITY" />
+                        <ComboBox HorizontalAlignment="Stretch"
+                                  ItemsSource="{Binding Qualities}"
+                                  SelectedItem="{Binding SelectedQuality}" />
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock Classes="readout"
+                           Margin="0,8,0,0"
+                           TextWrapping="Wrap"
+                           Text="{Binding FormatNote}"
+                           IsVisible="{Binding FormatNote, Converter={StaticResource NotEmpty}}" />
+
+                <!-- Destination -->
+                <TextBlock Classes="label" Text="SAVE TO" Margin="0,16,0,6" />
+                <Grid ColumnDefinitions="*,Auto,Auto">
+                    <TextBox Grid.Column="0" Text="{Binding OutputDirectory}" />
+                    <Button Grid.Column="1" Classes="ghost" Content="Browse"
+                            Command="{Binding BrowseCommand}" Margin="8,0,0,0" />
+                    <Button Grid.Column="2" Classes="ghost" Content="Open"
+                            Command="{Binding OpenFolderCommand}" Margin="8,0,0,0" />
+                </Grid>
+
+                <!-- Toggles -->
+                <WrapPanel Margin="0,14,0,0">
+                    <CheckBox Content="Embed metadata" IsChecked="{Binding EmbedMetadata}" Margin="0,0,20,0" />
+                    <CheckBox Content="Embed cover art" IsChecked="{Binding EmbedThumbnail}" Margin="0,0,20,0" />
+                    <CheckBox Content="Expand playlists" IsChecked="{Binding ExpandPlaylists}" />
+                </WrapPanel>
+
+                <!-- Spotify -->
+                <Border Classes="inset" Padding="14,12" Margin="0,16,0,0">
+                    <StackPanel>
+                        <TextBlock Classes="label" Text="SPOTIFY  ·  OPTIONAL" />
+                        <TextBlock Classes="readout" TextWrapping="Wrap" Margin="0,0,0,10"
+                                   Text="Spotify audio is DRM protected and cannot be extracted. A Spotify link is read for its track names only, and the audio is then found on YouTube — so results are matches by name, not Spotify's own files. Paste a free Client ID and Secret from developer.spotify.com/dashboard to enable it." />
+                        <Grid ColumnDefinitions="*,12,*">
+                            <TextBox Grid.Column="0" Text="{Binding SpotifyClientId}" PlaceholderText="Client ID" />
+                            <TextBox Grid.Column="2" Text="{Binding SpotifyClientSecret}" PlaceholderText="Client Secret" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- ==================================================== Queue ==== -->
+        <Border Grid.Row="2" Classes="panel" Padding="16">
+            <Grid RowDefinitions="Auto,*">
+                <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <TextBlock Classes="label" Text="QUEUE" Margin="0" VerticalAlignment="Center" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                        <Button Classes="ghost" Content="Clear finished" Padding="10,6"
+                                Command="{Binding ClearFinishedCommand}" />
+                        <Button Classes="ghost" Content="Cancel" Padding="10,6"
+                                Command="{Binding CancelCommand}" />
+                    </StackPanel>
+                </Grid>
+
+                <Panel Grid.Row="1">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Jobs}"
+                                      ItemTemplate="{StaticResource JobRow}" />
+                    </ScrollViewer>
+
+                    <TextBlock Classes="readout"
+                               Text="Nothing queued yet."
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               IsHitTestVisible="False"
+                               IsVisible="{Binding Jobs.Count, Converter={StaticResource IsEmptyList}}" />
+                </Panel>
+            </Grid>
+        </Border>
+
+        <!-- ==================================================== Log ====== -->
+        <Border Grid.Row="3" Classes="panel" Padding="14,12" Margin="0,14,0,0" Height="132">
+            <Grid RowDefinitions="Auto,*">
+                <TextBlock Grid.Row="0" Classes="label" Text="LOG" />
+                <ScrollViewer Grid.Row="1" Name="LogScroller" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Log}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Classes="readout"
+                                           Text="{Binding}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,2" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- ==================================================== Status === -->
+        <Grid Grid.Row="4" ColumnDefinitions="Auto,*" Margin="2,14,2,0">
+            <Ellipse Grid.Column="0"
+                     Width="7" Height="7"
+                     Fill="{DynamicResource Accent}"
+                     VerticalAlignment="Center"
+                     Margin="0,0,10,0" />
+
+            <TextBlock Grid.Column="1"
+                       Classes="readout"
+                       Foreground="{DynamicResource InkSoft}"
+                       Text="{Binding Status}"
+                       VerticalAlignment="Center" />
+        </Grid>
+    </Grid>
+</Window>

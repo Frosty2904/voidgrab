@@ -1,0 +1,17 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:VoidGrab.Desktop"
+             x:Class="VoidGrab.Desktop.App"
+             RequestedThemeVariant="Dark">
+
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://VoidGrab/Theme/Void.axaml" />
+    </Application.Styles>
+
+    <Application.Resources>
+        <local:StateBrushConverter x:Key="StateBrush" />
+        <local:EmptyStringToBoolConverter x:Key="NotEmpty" />
+        <local:CountToBoolConverter x:Key="IsEmptyList" />
+    </Application.Resources>
+</Application>
