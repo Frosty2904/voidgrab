@@ -137,11 +137,19 @@ public sealed class ToolProvisioner
     {
         Directory.CreateDirectory(ToolsDirectory);
 
+        // A yt-dlp left behind by an interrupted download is still a file, so
+        // File.Exists alone would happily hand a truncated binary to every later
+        // run. Ask whether it actually works before trusting it.
+        if (HasYtDlp && !await IsYtDlpWorkingAsync(token))
+        {
+            log.Report("The installed yt-dlp is damaged - replacing it.");
+            TryDelete(YtDlpPath);
+        }
+
         if (!HasYtDlp)
         {
             log.Report("Fetching yt-dlp…");
-            await DownloadFileAsync(YtDlpUrl(), YtDlpPath, token, log);
-            MakeExecutable(YtDlpPath);
+            await DownloadToFinalPathAsync(YtDlpUrl(), YtDlpPath, token, log);
             log.Report("yt-dlp ready.");
         }
 
@@ -174,13 +182,9 @@ public sealed class ToolProvisioner
     public async Task UpdateYtDlpAsync(IProgress<string> log, CancellationToken token = default)
     {
         Directory.CreateDirectory(ToolsDirectory);
-        var staging = YtDlpPath + ".new";
 
         log.Report("Downloading the latest yt-dlp…");
-        await DownloadFileAsync(YtDlpUrl(), staging, token, log);
-
-        File.Move(staging, YtDlpPath, overwrite: true);
-        MakeExecutable(YtDlpPath);
+        await DownloadToFinalPathAsync(YtDlpUrl(), YtDlpPath, token, log);
         log.Report("yt-dlp updated.");
     }
 
@@ -285,6 +289,125 @@ public sealed class ToolProvisioner
         {
             throw new InvalidOperationException(
                 $"Could not mark {Path.GetFileName(path)} as executable: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Downloads to a staging name and only moves it into place once it has
+    /// arrived whole.
+    /// </summary>
+    /// <remarks>
+    /// This is the difference that mattered. Writing straight to the final path
+    /// means any interruption — a dropped connection, the app being closed, an
+    /// exception — leaves a truncated file under the real name. Since presence
+    /// is what decides whether to download again, that half-file is then used
+    /// forever, and a PyInstaller-packed tool like yt-dlp fails with "Could not
+    /// load PyInstaller's embedded PKG archive", which says nothing about the
+    /// actual problem. Staging means the final path only ever holds a complete
+    /// file, and a failure leaves no trace to poison the next run.
+    /// </remarks>
+    private static async Task DownloadToFinalPathAsync(
+        string url,
+        string destination,
+        CancellationToken token,
+        IProgress<string> log)
+    {
+        var staging = destination + ".part";
+
+        try
+        {
+            await DownloadFileAsync(url, staging, token, log);
+            EnsureLooksLikeProgram(staging);
+            MakeExecutable(staging);
+            File.Move(staging, destination, overwrite: true);
+        }
+        catch
+        {
+            TryDelete(staging);
+            throw;
+        }
+    }
+
+    /// <summary>Rejects an error page or a truncated transfer saved under a program's name.</summary>
+    private static void EnsureLooksLikeProgram(string path)
+    {
+        var length = new FileInfo(path).Length;
+
+        // Every build of these tools is megabytes; anything this small is an
+        // error page or a stub, whatever its extension claims.
+        if (length < 1024 * 1024)
+        {
+            throw new InvalidOperationException(
+                $"The download was only {length} bytes, which is far too small to be " +
+                "the real program. The host may have returned an error page.");
+        }
+
+        if (!OperatingSystem.IsWindows()) return;
+
+        var magic = new byte[2];
+        using var stream = File.OpenRead(path);
+        if (stream.Read(magic, 0, 2) < 2 || magic[0] != (byte)'M' || magic[1] != (byte)'Z')
+        {
+            throw new InvalidOperationException(
+                "The download is not a Windows executable. The host may have returned " +
+                "an error page.");
+        }
+    }
+
+    /// <summary>
+    /// Asks yt-dlp for its version, as a liveness check.
+    /// </summary>
+    /// <remarks>
+    /// Cheap, and the only check that catches the failure this guards against:
+    /// a truncated PyInstaller binary has a valid PE header and a plausible
+    /// size, and only reveals itself when its bootloader cannot find the
+    /// archive inside it. Running it is the test.
+    /// </remarks>
+    private async Task<bool> IsYtDlpWorkingAsync(CancellationToken token)
+    {
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+            timeout.CancelAfter(TimeSpan.FromSeconds(25));
+
+            using var process = new System.Diagnostics.Process
+            {
+                StartInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = YtDlpPath,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                },
+            };
+
+            process.StartInfo.ArgumentList.Add("--version");
+            process.Start();
+
+            var output = await process.StandardOutput.ReadToEndAsync(timeout.Token);
+            await process.WaitForExitAsync(timeout.Token);
+
+            return process.ExitCode == 0 && output.Trim().Length > 0;
+        }
+        catch
+        {
+            // Cannot start, times out, or exits non-zero: whatever the reason,
+            // it is not a tool worth handing a download to.
+            return false;
+        }
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch
+        {
+            // Locked by a virus scanner or a sync client; the caller reports the
+            // real failure and a later run will try again.
         }
     }
 

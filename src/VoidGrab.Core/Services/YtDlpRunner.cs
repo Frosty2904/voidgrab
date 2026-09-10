@@ -109,6 +109,18 @@ public sealed class YtDlpRunner(ToolProvisioner tools)
 
         if (process.ExitCode != 0)
         {
+            // yt-dlp is a PyInstaller bundle. When its own binary is truncated,
+            // the bootloader fails before any of yt-dlp's code runs and says so
+            // in terms that mean nothing to someone downloading a video — so
+            // translate it into the action that actually fixes it.
+            if (errors.Any(l => l.Contains("PyInstaller", StringComparison.OrdinalIgnoreCase) &&
+                                l.Contains("PKG archive", StringComparison.OrdinalIgnoreCase)))
+            {
+                return new DownloadResult(false, null,
+                    "The yt-dlp tool is damaged, most likely from an interrupted download. " +
+                    "Press “Update yt-dlp” to reinstall it, then try again.");
+            }
+
             var detail = errors.LastOrDefault(l => l.Contains("ERROR", StringComparison.OrdinalIgnoreCase))
                          ?? errors.LastOrDefault()
                          ?? $"yt-dlp exited with code {process.ExitCode}.";

@@ -29,6 +29,15 @@ $ErrorActionPreference = 'Stop'
 $project = Join-Path $PSScriptRoot 'src\VoidGrab\VoidGrab.csproj'
 if (-not (Test-Path $project)) { throw "Project not found at $project" }
 
+# A running instance holds a lock on the .exe, and MSBuild reports that as a raw
+# UnauthorizedAccessException from GenerateBundle - which says nothing about the
+# actual cause. Say it plainly instead.
+$running = Get-Process -Name 'VoidGrab' -ErrorAction SilentlyContinue
+if ($running) {
+    throw ("VoidGrab is running (pid {0}). Close it first - the publish step " +
+           "cannot overwrite an executable that is in use." -f ($running.Id -join ', '))
+}
+
 Write-Host "Publishing VoidGrab ($Configuration)..." -ForegroundColor Cyan
 
 dotnet publish $project `
