@@ -1,0 +1,344 @@
+<Window x:Class="VoidGrab.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:VoidGrab"
+        mc:Ignorable="d"
+        Title="VoidGrab"
+        Height="820" Width="1020"
+        MinHeight="620" MinWidth="880"
+        Background="{StaticResource Canvas}"
+        TextOptions.TextFormattingMode="Ideal"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <!-- One queue row: title, source and format chips, progress, detail. -->
+        <DataTemplate x:Key="JobRow">
+            <Border Background="{StaticResource Surface}"
+                    BorderBrush="{StaticResource Line}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14,11"
+                    Margin="0,0,0,8">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="{Binding Title}"
+                                   Foreground="{StaticResource Ink}"
+                                   FontSize="13.5"
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center" />
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0">
+                            <Border Background="{StaticResource Surface2}"
+                                    BorderBrush="{StaticResource Line}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="6,2" Margin="0,0,6,0">
+                                <TextBlock Text="{Binding SourceLabel}" Style="{StaticResource Readout}" />
+                            </Border>
+                            <Border Background="{StaticResource Surface2}"
+                                    BorderBrush="{StaticResource Line}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="6,2" Margin="0,0,6,0">
+                                <TextBlock Text="{Binding FormatLabel}" Style="{StaticResource Readout}" />
+                            </Border>
+                            <TextBlock Text="{Binding StateLabel}"
+                                       Style="{StaticResource Readout}"
+                                       Foreground="{Binding State, Converter={StaticResource StateBrush}}"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
+
+                    <ProgressBar Grid.Row="1"
+                                 Margin="0,10,0,0"
+                                 Minimum="0" Maximum="1"
+                                 Value="{Binding Progress, Mode=OneWay}"
+                                 IsIndeterminate="{Binding IsIndeterminate}" />
+
+                    <TextBlock Grid.Row="2"
+                               Margin="0,7,0,0"
+                               Text="{Binding Detail}"
+                               Style="{StaticResource Readout}"
+                               TextTrimming="CharacterEllipsis" />
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid Margin="24,20,24,18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ================================================== Header ===== -->
+        <Grid Grid.Row="0" Margin="0,0,0,18">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Rectangle Grid.Column="0"
+                       Width="14" Height="14"
+                       RadiusX="2" RadiusY="2"
+                       Fill="{StaticResource NeonFill}"
+                       VerticalAlignment="Center"
+                       Margin="0,0,12,0">
+                <Rectangle.RenderTransform>
+                    <RotateTransform Angle="45" CenterX="7" CenterY="7" />
+                </Rectangle.RenderTransform>
+                <Rectangle.Effect>
+                    <DropShadowEffect Color="{StaticResource AccentColor}"
+                                      BlurRadius="16" ShadowDepth="0" Opacity="0.8" />
+                </Rectangle.Effect>
+            </Rectangle>
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock Text="VoidGrab" Style="{StaticResource TitleText}" />
+                <TextBlock Text="YouTube  ·  TikTok  ·  Spotify-matched audio"
+                           Style="{StaticResource Readout}"
+                           Margin="0,2,0,0" />
+            </StackPanel>
+
+            <Button Grid.Column="2"
+                    Content="Update yt-dlp"
+                    Style="{StaticResource GhostButton}"
+                    Command="{Binding UpdateToolCommand}"
+                    VerticalAlignment="Center" />
+        </Grid>
+
+        <!-- ================================================== Controls === -->
+        <Border Grid.Row="1" Style="{StaticResource Panel}" Padding="18" Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock Text="LINK" Style="{StaticResource LabelText}" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox Grid.Column="0"
+                             Text="{Binding UrlInput, UpdateSourceTrigger=PropertyChanged}"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             MinHeight="42" MaxHeight="96"
+                             VerticalScrollBarVisibility="Auto"
+                             KeyDown="OnLinkKeyDown" />
+
+                    <Button Grid.Column="1"
+                            Content="Add to queue"
+                            Style="{StaticResource AccentButton}"
+                            Command="{Binding AddCommand}"
+                            Margin="10,0,0,0"
+                            VerticalAlignment="Stretch" />
+                </Grid>
+                <TextBlock Text="One per line for several at once. Playlists and albums expand into individual items."
+                           Style="{StaticResource Readout}"
+                           Margin="0,7,0,0" />
+
+                <!-- Format and quality -->
+                <Grid Margin="0,16,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="200" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="FORMAT" Style="{StaticResource LabelText}" />
+                        <ComboBox ItemsSource="{Binding Formats}"
+                                  SelectedItem="{Binding SelectedFormat}" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="QUALITY" Style="{StaticResource LabelText}" />
+                        <ComboBox ItemsSource="{Binding Qualities}"
+                                  SelectedItem="{Binding SelectedQuality}" />
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock Text="{Binding FormatNote}"
+                           Style="{StaticResource Readout}"
+                           Foreground="{StaticResource Muted}"
+                           TextWrapping="Wrap"
+                           Margin="0,8,0,0"
+                           Visibility="{Binding FormatNote, Converter={StaticResource EmptyToVisibility}}" />
+
+                <!-- Destination -->
+                <TextBlock Text="SAVE TO" Style="{StaticResource LabelText}" Margin="0,16,0,6" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox Grid.Column="0" Text="{Binding OutputDirectory}" />
+                    <Button Grid.Column="1" Content="Browse"
+                            Style="{StaticResource GhostButton}"
+                            Command="{Binding BrowseCommand}" Margin="8,0,0,0" />
+                    <Button Grid.Column="2" Content="Open"
+                            Style="{StaticResource GhostButton}"
+                            Command="{Binding OpenFolderCommand}" Margin="8,0,0,0" />
+                </Grid>
+
+                <!-- Toggles -->
+                <WrapPanel Margin="0,16,0,0">
+                    <CheckBox Content="Embed metadata" IsChecked="{Binding EmbedMetadata}" Margin="0,0,20,0" />
+                    <CheckBox Content="Embed cover art" IsChecked="{Binding EmbedThumbnail}" Margin="0,0,20,0" />
+                    <CheckBox Content="Expand playlists" IsChecked="{Binding ExpandPlaylists}" />
+                </WrapPanel>
+
+                <!-- Spotify -->
+                <Border Background="{StaticResource Surface2}"
+                        BorderBrush="{StaticResource Line}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="14,12"
+                        Margin="0,16,0,0">
+                    <StackPanel>
+                        <TextBlock Text="SPOTIFY  ·  OPTIONAL" Style="{StaticResource LabelText}" />
+                        <TextBlock TextWrapping="Wrap" Style="{StaticResource Readout}" Margin="0,0,0,10">
+                            Spotify audio is DRM protected and cannot be extracted. A Spotify link is
+                            read for its track names only, and the audio is then found on YouTube — so
+                            results are matches by name, not Spotify's own files. Paste a free
+                            Client ID and Secret from developer.spotify.com/dashboard to enable it.
+                        </TextBlock>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" Text="{Binding SpotifyClientId}" />
+                            <TextBox Grid.Column="2" Text="{Binding SpotifyClientSecret}" />
+                        </Grid>
+                        <Grid Margin="0,5,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Client ID" Style="{StaticResource Readout}" />
+                            <TextBlock Grid.Column="2" Text="Client Secret" Style="{StaticResource Readout}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- ================================================== Queue ====== -->
+        <Border Grid.Row="2" Style="{StaticResource Panel}" Padding="16">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <TextBlock Text="QUEUE" Style="{StaticResource LabelText}" Margin="0" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="Clear finished"
+                                Style="{StaticResource GhostButton}"
+                                Command="{Binding ClearFinishedCommand}"
+                                Padding="10,5" Margin="0,0,8,0" />
+                        <Button Content="Cancel"
+                                Style="{StaticResource GhostButton}"
+                                Command="{Binding CancelCommand}"
+                                Padding="10,5" />
+                    </StackPanel>
+                </Grid>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Jobs}"
+                                  ItemTemplate="{StaticResource JobRow}" />
+                </ScrollViewer>
+
+                <TextBlock Grid.Row="1"
+                           Text="Nothing queued yet."
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           IsHitTestVisible="False">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource Readout}">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Jobs.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+        </Border>
+
+        <!-- ================================================== Log ======== -->
+        <Border Grid.Row="3" Style="{StaticResource Panel}" Padding="14,12" Margin="0,14,0,0" Height="132">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="LOG" Style="{StaticResource LabelText}" />
+                <ScrollViewer Grid.Row="1" x:Name="LogScroller" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Log}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}"
+                                           FontFamily="{StaticResource MonoFont}"
+                                           FontSize="10.5"
+                                           Foreground="{StaticResource Muted}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,2" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- ================================================== Status ===== -->
+        <Grid Grid.Row="4" Margin="2,14,2,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Ellipse Grid.Column="0"
+                     Width="7" Height="7"
+                     Fill="{StaticResource Accent}"
+                     VerticalAlignment="Center"
+                     Margin="0,0,10,0">
+                <Ellipse.Effect>
+                    <DropShadowEffect Color="{StaticResource AccentColor}"
+                                      BlurRadius="12" ShadowDepth="0" Opacity="0.9" />
+                </Ellipse.Effect>
+            </Ellipse>
+
+            <TextBlock Grid.Column="1"
+                       Text="{Binding Status}"
+                       Style="{StaticResource Readout}"
+                       Foreground="{StaticResource InkSoft}"
+                       VerticalAlignment="Center" />
+        </Grid>
+    </Grid>
+</Window>

@@ -1,0 +1,16 @@
+# Build output
+bin/
+obj/
+publish/
+*.user
+*.suo
+
+# Tools are fetched at runtime, never committed. ffmpeg alone is ~300 MB, and
+# yt-dlp needs to track upstream rather than a pinned copy in git history.
+tools/
+selftest.txt
+
+# IDE
+.vs/
+.idea/
+*.DotSettings.user

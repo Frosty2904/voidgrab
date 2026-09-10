@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+
+    <AssemblyName>VoidGrab</AssemblyName>
+    <RootNamespace>VoidGrab</RootNamespace>
+    <Product>VoidGrab</Product>
+    <Description>Stylised downloader for YouTube, TikTok and Spotify-matched audio.</Description>
+    <Version>1.0.0</Version>
+
+    <!--
+      Single-file publish keeps the managed side to one .exe. yt-dlp and ffmpeg
+      deliberately stay outside it, in a tools/ folder: yt-dlp needs replacing
+      whenever YouTube changes something, and a tool the app can overwrite in
+      place is worth far more than one sealed inside the binary.
+    -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+</Project>
